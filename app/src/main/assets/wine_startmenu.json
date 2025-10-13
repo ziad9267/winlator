@@ -20,7 +20,7 @@
         "children" : [
             {
                 "name" : "Computer",
-                "path" : "C:/windows/wfm.exe"
+                "path" : "C:/windows/explorer.exe"
             },
             {
                 "name" : "Task Manager",

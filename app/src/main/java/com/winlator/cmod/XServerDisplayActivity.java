@@ -1731,7 +1731,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
                 args += " " + envVars.get("EXTRA_EXEC_ARGS");
                 envVars.remove("EXTRA_EXEC_ARGS"); // Remove the key after use
             } else {
-                args += "\"wfm.exe\"";
+                args += "\"explorer.exe\"";
             }
         }
         // Construct the final command
@@ -1746,7 +1746,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             filename = FileUtils.getName(shortcut.path);
         }
         else
-            filename = "wfm.exe";
+            filename = "explorer.exe";
         return filename;
     }
 
