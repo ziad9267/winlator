@@ -14,7 +14,7 @@
 #define printf(...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, __VA_ARGS__)
 
 VkInstance instance;
-VkPhysicalDevice physicalDevice;
+VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 PFN_vkGetPhysicalDeviceProperties getPhysicalDeviceProperties;
 PFN_vkEnumerateDeviceExtensionProperties enumerateDeviceExtensionProperties;
 PFN_vkEnumeratePhysicalDevices enumeratePhysicalDevices;
@@ -126,17 +126,18 @@ static VkResult create_instance(jstring driverName, JNIEnv *env, jobject context
 
     result = createInstance(&create_info, NULL, &instance);
 
-    if (result == VK_SUCCESS) {
-        getPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties)gip(instance, "vkGetPhysicalDeviceProperties");
-        destroyInstance = (PFN_vkDestroyInstance)gip(instance, "vkDestroyInstance");
-        enumerateDeviceExtensionProperties = (PFN_vkEnumerateDeviceExtensionProperties)gip(instance, "vkEnumerateDeviceExtensionProperties");
-        enumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices)gip(instance, "vkEnumeratePhysicalDevices");
+    if (result != VK_SUCCESS)
+        return result;
 
-        if (!getPhysicalDeviceProperties || !destroyInstance || !enumerateDeviceExtensionProperties || !enumeratePhysicalDevices)
-            return VK_ERROR_INITIALIZATION_FAILED;
-    }
+    getPhysicalDeviceProperties = (PFN_vkGetPhysicalDeviceProperties)gip(instance, "vkGetPhysicalDeviceProperties");
+    destroyInstance = (PFN_vkDestroyInstance)gip(instance, "vkDestroyInstance");
+    enumerateDeviceExtensionProperties = (PFN_vkEnumerateDeviceExtensionProperties)gip(instance, "vkEnumerateDeviceExtensionProperties");
+    enumeratePhysicalDevices = (PFN_vkEnumeratePhysicalDevices)gip(instance, "vkEnumeratePhysicalDevices");
 
-    return result;
+    if (!getPhysicalDeviceProperties || !destroyInstance || !enumerateDeviceExtensionProperties || !enumeratePhysicalDevices)
+        return VK_ERROR_INITIALIZATION_FAILED;
+
+    return VK_SUCCESS;
 }
 
 static VkResult enumerate_physical_devices() {
@@ -145,13 +146,27 @@ static VkResult enumerate_physical_devices() {
 
     result = enumeratePhysicalDevices(instance, &deviceCount, NULL);
 
-    VkPhysicalDevice pdevices[deviceCount];
-    if (result == VK_SUCCESS && deviceCount > 0) {
-        result = enumeratePhysicalDevices(instance, &deviceCount, pdevices);
-        physicalDevice = pdevices[0];
-    }
+    if (result != VK_SUCCESS)
+        return result;
 
-    return result;
+    if (deviceCount < 1)
+        return VK_ERROR_INITIALIZATION_FAILED;
+
+    VkPhysicalDevice *pdevices = malloc(sizeof(VkPhysicalDevice) * deviceCount);
+    if (!pdevices)
+        return VK_ERROR_OUT_OF_HOST_MEMORY;
+
+    result = enumeratePhysicalDevices(instance, &deviceCount, pdevices);
+
+    if (result != VK_SUCCESS)
+        return result;
+
+    physicalDevice = pdevices[0];
+
+    if (physicalDevice == VK_NULL_HANDLE)
+        return VK_ERROR_INITIALIZATION_FAILED;
+
+    return VK_SUCCESS;
 }
 
 JNIEXPORT jstring JNICALL
@@ -236,6 +251,12 @@ Java_com_winlator_cmod_core_GPUInformation_enumerateExtensions(JNIEnv *env, jcla
     VkExtensionProperties *extensionProperties = malloc(sizeof(VkExtensionProperties) * extensionCount);
     enumerateDeviceExtensionProperties(physicalDevice, NULL, &extensionCount,
                                        extensionProperties);
+
+    if (result != VK_SUCCESS) {
+        printf("Failed to query extensions");
+        return (*env)->NewObjectArray(env, 0, (*env)->FindClass(env, "java/lang/String"), NULL);
+    }
+
     extensions = (jobjectArray) (*env)->NewObjectArray(env, extensionCount,
                                                        (*env)->FindClass(env, "java/lang/String"),
                                                        NULL);
