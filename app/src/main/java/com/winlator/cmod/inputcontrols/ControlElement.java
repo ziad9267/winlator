@@ -347,9 +347,10 @@ public class ControlElement {
     public void draw(Canvas canvas) {
         int snappingSize = inputControlsView.getSnappingSize();
         Paint paint = inputControlsView.getPaint();
-        int primaryColor = inputControlsView.getSecondaryColor(); // getPrimaryColor();
+        int primaryColor = inputControlsView.getPrimaryColor();
+        int secondaryColor = inputControlsView.getSecondaryColor();
 
-        int fillColor = ColorUtils.setAlphaComponent(primaryColor, 70);
+        int fillColor = ColorUtils.setAlphaComponent(secondaryColor, 70);
 
         paint.setColor(selected ? inputControlsView.getSecondaryColor() : primaryColor);
         paint.setStyle(Paint.Style.STROKE);
