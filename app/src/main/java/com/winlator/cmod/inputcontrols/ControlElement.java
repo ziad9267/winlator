@@ -352,7 +352,7 @@ public class ControlElement {
         int primaryColor = inputControlsView.getPrimaryColor();
         int secondaryColor = inputControlsView.getSecondaryColor();
 
-        int fillColor = ColorUtils.setAlphaComponent(secondaryColor, 70);
+        int fillColor = ColorUtils.setAlphaComponent(secondaryColor, 125);
 
         paint.setColor(selected ? inputControlsView.getSecondaryColor() : primaryColor);
         paint.setStyle(Paint.Style.STROKE);
