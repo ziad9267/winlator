@@ -1470,7 +1470,6 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
 
     private void extractGraphicsDriverFiles() {
         String adrenoToolsDriverId = graphicsDriverConfig.get("version");
-        String isAdrenotoolsTurnip = graphicsDriverConfig.get("adrenotoolsTurnip");
 
         Log.d("GraphicsDriverExtraction", "Adrenotools DriverID: " + adrenoToolsDriverId);
 
@@ -1486,11 +1485,7 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
             envVars.put("MESA_VK_WSI_DEBUG", "sw");
         }
 
-        if (adrenoToolsDriverId.toLowerCase().contains("turnip") && isAdrenotoolsTurnip.equals("0"))
-            envVars.put("VK_ICD_FILENAMES", imageFs.getShareDir() + "/vulkan/icd.d/freedreno_icd.aarch64.json");
-        else
-            envVars.put("VK_ICD_FILENAMES", imageFs.getShareDir() + "/vulkan/icd.d/wrapper_icd.aarch64.json");
-
+        envVars.put("VK_ICD_FILENAMES", imageFs.getShareDir() + "/vulkan/icd.d/wrapper_icd.aarch64.json");
         envVars.put("GALLIUM_DRIVER", "zink");
 
         if (firstTimeBoot) {
@@ -1532,8 +1527,16 @@ public class XServerDisplayActivity extends AppCompatActivity implements Navigat
         String disablePresentWait = graphicsDriverConfig.get("disablePresentWait");
         envVars.put("WRAPPER_DISABLE_PRESENT_WAIT", disablePresentWait);
 
-        String blit = graphicsDriverConfig.get("blit");
-        envVars.put("WRAPPER_BLIT", blit);
+        String bcnEmulation = graphicsDriverConfig.get("bcnEmulation");
+        switch (bcnEmulation) {
+            case "auto" -> envVars.put("WRAPPER_EMULATE_BCN", "3");
+            case "full" -> envVars.put("WRAPPER_EMULATE_BCN", "2");
+            case "none" -> envVars.put("WRAPPER_EMULATE_BCN", "0");
+            default -> envVars.put("WRAPPER_EMULATE_BCN", "1");
+        }
+
+        String bcnEmulationCache = graphicsDriverConfig.get("bcnEmulationType");
+        envVars.put("WRAPPER_USE_BCN_CACHE", bcnEmulationCache);
 
         if (!vkbasaltConfig.isEmpty()) {
             envVars.put("ENABLE_VKBASALT", "1");
