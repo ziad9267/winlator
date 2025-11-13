@@ -87,6 +87,8 @@ public class ControlElement {
     private CubicBezierInterpolator interpolator;
     private Object touchTime;
 
+    private final PointF touchDownOrigin = new PointF();
+
     public ControlElement(InputControlsView inputControlsView) {
         this.inputControlsView = inputControlsView;
     }
@@ -673,6 +675,21 @@ public class ControlElement {
                 inputControlsView.invalidate();
                 return true;
             }
+
+            else if (type == Type.STICK) {
+                // Record the initial touch point as our new "center".
+
+                touchDownOrigin.set(x, y);
+                // Force the stick to a neutral state to prevent instant movement.
+
+                handleTouchMove(pointerId, x, y);
+                // Set the visual position to the center of the element.
+
+                Rect boundingBox = getBoundingBox();
+
+                setCurrentPosition(boundingBox.centerX(), boundingBox.centerY());
+                return true;
+            }
             else if (type == Type.RANGE_BUTTON) {
                 scroller.handleTouchDown(x, y);
                 inputControlsView.invalidate();
@@ -718,16 +735,45 @@ public class ControlElement {
 
                 deltaX = Mathf.clamp(offsetX / radius, -1, 1);
                 deltaY = Mathf.clamp(offsetY / radius, -1, 1);
+
+                float magnitude = (float) Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+                if (magnitude > 1.0f) {
+                    deltaX /= magnitude;
+                    deltaY /= magnitude;
+                }
             }
 
             if (type == Type.STICK) {
+                // --- START OF STICK-SPECIFIC LOGIC ---
+
+                // 1. Calculate offset from the initial touch point for relative movement.
+                float offsetX = x - touchDownOrigin.x;
+                float offsetY = y - touchDownOrigin.y;
+
+                // 2. Constrain the movement to a circular area.
+                float distanceSq = offsetX * offsetX + offsetY * offsetY;
+
+                if (distanceSq > radius * radius) {
+                    float magnitude = (float) Math.sqrt(distanceSq);
+
+                    offsetX = (offsetX / magnitude) * radius;
+                    offsetY = (offsetY / magnitude) * radius;
+                }
+
+                // 3. Update the visual position of the stick's knob.
                 if (currentPosition == null) currentPosition = new PointF();
-                currentPosition.x = boundingBox.left + deltaX * radius + radius;
-                currentPosition.y = boundingBox.top + deltaY * radius + radius;
+                currentPosition.x = boundingBox.centerX() + offsetX;
+                currentPosition.y = boundingBox.centerY() + offsetY;
+
+                // 4. Calculate the final -1.0 to 1.0 logical values.
+                deltaX = offsetX / radius;
+                deltaY = offsetY / radius;
+
+                // 5. Send the input events to the game.
                 final boolean[] states = {deltaY <= -STICK_DEAD_ZONE, deltaX >= STICK_DEAD_ZONE, deltaY >= STICK_DEAD_ZONE, deltaX <= -STICK_DEAD_ZONE};
 
                 for (byte i = 0; i < 4; i++) {
-                    float value = i == 1 || i == 3 ? deltaX : deltaY;
+                    float value = (i == 1 || i == 3) ? deltaX : deltaY;
                     Binding binding = getBindingAt(i);
                     if (binding.isGamepad()) {
                         value = Mathf.clamp(Math.max(0, Math.abs(value) - 0.01f) * Mathf.sign(value) * STICK_SENSITIVITY, -1, 1);
